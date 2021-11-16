@@ -19,16 +19,17 @@ def lerArquivosDiretorio(diretorio, att = False):
                     x = float(partes[1])
                     y = float(partes[2])
                     coordenadas.append((x, y))
-        somaResultados = 0.0
-        somaTempo = 0.0
+        melhorResultado = math.inf
+        tempoMelhor = 0.0
         for i in range(20):
             inicio = time.time()
             resultado = calcularHeuristica(coordenadas, att)
             tempoGasto = time.time() - inicio
-            somaResultados += resultado
-            somaTempo += tempoGasto
-        print("Média dos resultados encontrados para o arquivo", filename, ":", somaResultados/20.0)
-        print("Média de tempo gasto para o arquivo", filename, ":", (somaTempo/20.0)*1000.0, "ms")
+            if resultado < melhorResultado:
+                melhorResultado = resultado
+                tempoMelhor = tempoGasto
+        print("Melhor resultado encontrado para o arquivo", filename, ":", melhorResultado)
+        print("Tempo gasto no melhor resultado para o arquivo", filename, ":", tempoMelhor*1000.0, "ms")
         print()
 
 def distancia(p1, p2, att):

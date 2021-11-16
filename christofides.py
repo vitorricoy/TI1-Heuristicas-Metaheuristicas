@@ -20,16 +20,12 @@ def lerArquivosDiretorio(diretorio, att = False):
                     x = float(partes[1])
                     y = float(partes[2])
                     coordenadas.append((x, y))
-        somaResultados = 0.0
-        somaTempo = 0.0
-        for i in range(20):
-            inicio = time.time()
-            resultado = calcularHeuristica(coordenadas, att)
-            tempoGasto = time.time() - inicio
-            somaResultados += resultado
-            somaTempo += tempoGasto
-        print("Média dos resultados encontrados para o arquivo", filename, ":", somaResultados/20.0)
-        print("Média de tempo gasto para o arquivo", filename, ":", (somaTempo/20.0)*1000.0, "ms")
+        
+        inicio = time.time()
+        resultado = calcularHeuristica(coordenadas, att)
+        tempoGasto = time.time() - inicio
+        print("Resultado encontrado para o arquivo", filename, ":", resultado)
+        print("Tempo gasto para o arquivo", filename, ":", tempoGasto*1000.0, "ms")
         print()
 
 def distancia(p1, p2, att):
@@ -85,21 +81,17 @@ def kruskalMst(listaArestas, numeroVertices):
             unionFindUne(pai, rank, x, y)
     return result
 
-def minimum_weight_matching(mst, matrizDistancia, verticesImpares):
-    random.shuffle(verticesImpares)
+def minimumWeightMatching(mst, matrizDistancia, verticesImpares):
+    import networkx as nx
 
-    while verticesImpares:
-        v = verticesImpares.pop()
-        tamanho = float("inf")
-        u = 1
-        maisProximo = 0
-        for u in verticesImpares:
-            if v != u and matrizDistancia[v][u] < tamanho:
-                tamanho = matrizDistancia[v][u]
-                maisProximo = u
-
-        mst.append((v, maisProximo, tamanho))
-        verticesImpares.remove(maisProximo)
+    G = nx.Graph()
+    for v in verticesImpares:
+        for j in verticesImpares:
+            if v != j:
+                G.add_edge(v, j, weight=-matrizDistancia[v][j])
+    matching = nx.algorithms.matching.max_weight_matching(G, True)
+    for (u, v) in matching:
+        mst.append((u, v, matrizDistancia[u][v]))
 
 def find_eulerian_tour(mst, matrizDistancia):
     # find neigbours
@@ -113,10 +105,6 @@ def find_eulerian_tour(mst, matrizDistancia):
 
         neighbours[edge[0]].append(edge[1])
         neighbours[edge[1]].append(edge[0])
-
-    # print("Neighbours: ", neighbours)
-
-    # finds the hamiltonian circuit
     start_vertex = mst[0][0]
     EP = [neighbours[start_vertex][0]]
 
@@ -183,7 +171,7 @@ def calcularHeuristica(coordenadas, att):
         matrizDistancias.append(temp)
     mst = kruskalMst(listaArestas, len(coordenadas))
     verticesImpares = find_odd_vertexes(mst)
-    minimum_weight_matching(mst, matrizDistancias, verticesImpares)
+    minimumWeightMatching(mst, matrizDistancias, verticesImpares)
     eulerian_tour = find_eulerian_tour(mst, matrizDistancias)
     
     current = eulerian_tour[0]
