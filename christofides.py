@@ -4,6 +4,7 @@ import time
 import os
 from queue import PriorityQueue
 
+# Lê os arquivos do diretório indicado, executa a heurística para cada um deles e imprime o resultado
 def lerArquivosDiretorio(diretorio, att = False):
     for filename in os.listdir(diretorio):
         coordenadas = []
@@ -28,6 +29,7 @@ def lerArquivosDiretorio(diretorio, att = False):
         print("Tempo gasto para o arquivo", filename, ":", tempoGasto*1000.0, "ms")
         print()
 
+# Calcula a distância de acordo com a formula correta do arquivo
 def distancia(p1, p2, att):
     if att:
         xd = p1[0]-p2[0]
@@ -43,11 +45,13 @@ def distancia(p1, p2, att):
         yd = p1[1]-p2[1]
         return int(round(math.sqrt(xd*xd + yd*yd)))
 
+# Função de busca do union find (usado pelo Kruskal)
 def unionFindBusca(pai, i):
     if pai[i] == i:
         return i
     return unionFindBusca(pai, pai[i])
  
+ # Função de união do union find (usado pelo Kruskal)
 def unionFindUne(pai, rank, x, y):
     raizX = unionFindBusca(pai, x)
     raizY = unionFindBusca(pai, y)
@@ -59,104 +63,72 @@ def unionFindUne(pai, rank, x, y):
         pai[raizY] = raizX
         rank[raizX] += 1
         
-
+# Algoritmo de kruskal para calcular a MST do grafo com base na lista de arestas
 def kruskalMst(listaArestas, numeroVertices):
-    result = []
-    i = 0
-    e = 0
+    resultado = []
+    it = 0
+    # Ordena a lista de arestas de forma crescente pelo peso da aresta
     listaArestas = sorted(listaArestas, key=lambda item: item[2])
     pai = []
     rank = []
     for no in range(numeroVertices):
         pai.append(no)
         rank.append(0)
-    while e < numeroVertices-1:
-        u, v, w = listaArestas[i]
-        i = i + 1
-        x = unionFindBusca(pai, u)
-        y = unionFindBusca(pai, v)
-        if x != y:
-            e = e + 1
-            result.append([u, v, w])
-            unionFindUne(pai, rank, x, y)
-    return result
+    while len(resultado) < numeroVertices-1:
+        x, y, peso = listaArestas[it]
+        it+= 1
+        conjuntoX = unionFindBusca(pai, x)
+        conjuntoY = unionFindBusca(pai, y)
+        if conjuntoX != conjuntoY:
+            resultado.append([x, y, peso])
+            unionFindUne(pai, rank, conjuntoX, conjuntoY)
+    return resultado
 
-def minimumWeightMatching(mst, matrizDistancia, verticesImpares):
+def matchingMinimo(matrizDistancia, verticesImpares):
+    # Usa a biblioteca networkx para encontrar o matching mínimo no subgrafo
     import networkx as nx
-
+    # Constrói o grafo no formato da biblioteca
     G = nx.Graph()
     for v in verticesImpares:
         for j in verticesImpares:
             if v != j:
-                G.add_edge(v, j, weight=-matrizDistancia[v][j])
-    matching = nx.algorithms.matching.max_weight_matching(G, True)
-    for (u, v) in matching:
-        mst.append((u, v, matrizDistancia[u][v]))
+                G.add_edge(v, j, weight=matrizDistancia[v][j])
+    # Executa o matching
+    # Procura o matching de cardinalidade máxima
+    return nx.algorithms.matching.min_weight_matching(G, True)
+    
 
-def find_eulerian_tour(mst, matrizDistancia):
-    # find neigbours
-    neighbours = {}
-    for edge in mst:
-        if edge[0] not in neighbours:
-            neighbours[edge[0]] = []
+# Encontra um ciclo euleriano no multigrafo
+def encontraCicloEuleriano(arestasCombinacao, matrizDistancia):
+    # Usa a biblioteca networkx para encontrar o ciclo euleriano no multigrafo
+    import networkx as nx
+    # Constrói o multigrafo no formato da biblioteca
+    G = nx.MultiGraph()
+    for v1, v2, peso in arestasCombinacao:
+        G.add_edge(v1, v2, weight=peso)
+    arestasCiclo = list(nx.eulerian_circuit(G))
+    # Cria a lista dos vértices visitados
+    verticesVisitados = [arestasCiclo[0][0]]
+    for v1, v2 in arestasCiclo:
+        verticesVisitados.append(v2)
+    return verticesVisitados
 
-        if edge[1] not in neighbours:
-            neighbours[edge[1]] = []
+# Encontra os vértices de grau impar na mst
+def encontrarVerticesGrauImpar(mst, numeroVertices):
+    grauVertices = [0]*numeroVertices
+    verticesImpares = []
+    for aresta in mst:
+        grauVertices[aresta[0]] += 1
+        grauVertices[aresta[1]] += 1
 
-        neighbours[edge[0]].append(edge[1])
-        neighbours[edge[1]].append(edge[0])
-    start_vertex = mst[0][0]
-    EP = [neighbours[start_vertex][0]]
+    for vertice in range(numeroVertices):
+        if grauVertices[vertice] % 2 == 1:
+            verticesImpares.append(vertice)
 
-    while len(mst) > 0:
-        for i, v in enumerate(EP):
-            if len(neighbours[v]) > 0:
-                break
-
-        while len(neighbours[v]) > 0:
-            w = neighbours[v][0]
-
-            remove_edge_from_matchedMST(mst, v, w)
-
-            del neighbours[v][(neighbours[v].index(w))]
-            del neighbours[w][(neighbours[w].index(v))]
-
-            i += 1
-            EP.insert(i, w)
-
-            v = w
-
-    return EP
-
-
-def remove_edge_from_matchedMST(mst, v1, v2):
-
-    for i, item in enumerate(mst):
-        if (item[0] == v2 and item[1] == v1) or (item[0] == v1 and item[1] == v2):
-            del mst[i]
-
-    return mst
-
-def find_odd_vertexes(mst):
-    tmp_g = {}
-    vertexes = []
-    for edge in mst:
-        if edge[0] not in tmp_g:
-            tmp_g[edge[0]] = 0
-
-        if edge[1] not in tmp_g:
-            tmp_g[edge[1]] = 0
-
-        tmp_g[edge[0]] += 1
-        tmp_g[edge[1]] += 1
-
-    for vertex in tmp_g:
-        if tmp_g[vertex] % 2 == 1:
-            vertexes.append(vertex)
-
-    return vertexes
+    return verticesImpares
 
 def calcularHeuristica(coordenadas, att):
+    # Calcula a matriz de distâncias do grafo e a lista de arestas
     matrizDistancias = []
     listaArestas = []
     for i in range(len(coordenadas)):
@@ -169,21 +141,35 @@ def calcularHeuristica(coordenadas, att):
             if j > i:
                 listaArestas.append((i, j, distancia(coordenadas[i], coordenadas[j], att)))
         matrizDistancias.append(temp)
-    mst = kruskalMst(listaArestas, len(coordenadas))
-    verticesImpares = find_odd_vertexes(mst)
-    minimumWeightMatching(mst, matrizDistancias, verticesImpares)
-    eulerian_tour = find_eulerian_tour(mst, matrizDistancias)
     
-    current = eulerian_tour[0]
-    visited = [False] * len(eulerian_tour)
-    visited[0] = True
-    length = 0
-    for v in eulerian_tour[1:]:
-        if not visited[v]:
-            visited[v] = True
-            length += matrizDistancias[current][v]
-            current = v
-    return length
+    # Calcula a MST
+    mst = kruskalMst(listaArestas, len(coordenadas))
+    # Calcula os vértices de grau impar
+    verticesImpares = encontrarVerticesGrauImpar(mst, len(coordenadas))
+    # Calcula o matching minimo no subgrafo dos vértices de grau ímpar
+    matching = matchingMinimo(matrizDistancias, verticesImpares)
+    # Adiciona as arestas do matching na MST
+    arestasCombinacao = mst
+    for (u, v) in matching:
+        arestasCombinacao.append((u, v, matrizDistancias[u][v]))
+    # Calcula o ciclo euleriano no multigrafo da união do matching minimo e da MST
+    cicloEuleriano = encontraCicloEuleriano(arestasCombinacao, matrizDistancias)
+    # Remove os vértices repetidos do ciclo
+    cicloEulerianoComAtalhos = []
+    pegos = set()
+    for vertice in cicloEuleriano:
+        if vertice not in pegos:
+            cicloEulerianoComAtalhos.append(vertice)
+            pegos.add(vertice)
+    # Adiciona novamente o vértice que fecha o ciclo
+    cicloEulerianoComAtalhos.append(cicloEuleriano[-1])
+    # Calcula o custo da solução
+    tamanho = 0
+    verticeAtual = cicloEulerianoComAtalhos[0]
+    for proximoVertice in cicloEulerianoComAtalhos[1:]:
+        tamanho += matrizDistancias[verticeAtual][proximoVertice]
+        verticeAtual = proximoVertice
+    return tamanho
 
 lerArquivosDiretorio("ATT/", True)
 lerArquivosDiretorio("EUC_2D/")

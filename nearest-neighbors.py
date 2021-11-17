@@ -3,6 +3,7 @@ import random
 import time
 import os
 
+# Lê os arquivos do diretório indicado, executa a heurística para cada um deles e imprime o resultado
 def lerArquivosDiretorio(diretorio, att = False):
     for filename in os.listdir(diretorio):
         coordenadas = []
@@ -19,19 +20,19 @@ def lerArquivosDiretorio(diretorio, att = False):
                     x = float(partes[1])
                     y = float(partes[2])
                     coordenadas.append((x, y))
-        melhorResultado = math.inf
-        tempoMelhor = 0.0
-        for i in range(20):
+        somaResultado = 0.0
+        somaTempo = 0.0
+        for i in range(1000):
             inicio = time.time()
             resultado = calcularHeuristica(coordenadas, att)
             tempoGasto = time.time() - inicio
-            if resultado < melhorResultado:
-                melhorResultado = resultado
-                tempoMelhor = tempoGasto
-        print("Melhor resultado encontrado para o arquivo", filename, ":", melhorResultado)
-        print("Tempo gasto no melhor resultado para o arquivo", filename, ":", tempoMelhor*1000.0, "ms")
+            somaResultado += resultado
+            somaTempo += tempoGasto
+        print("Resultado medio encontrado para o arquivo", filename, ":", somaResultado/1000.0)
+        print("Tempo gasto medio para o arquivo", filename, ":", (somaTempo/1000.0)*1000.0, "ms")
         print()
 
+# Calcula a distância de acordo com a formula correta do arquivo
 def distancia(p1, p2, att):
     if att:
         xd = p1[0]-p2[0]
@@ -48,6 +49,7 @@ def distancia(p1, p2, att):
         return int(round(math.sqrt(xd*xd + yd*yd)))
 
 def calcularHeuristica(coordenadas, att):
+    # Calcula a matriz de distâncias do grafo
     matrizDistancias = []
     for i in range(len(coordenadas)):
         temp = []
@@ -57,10 +59,12 @@ def calcularHeuristica(coordenadas, att):
             else:
                 temp.append(distancia(coordenadas[i], coordenadas[j], att))
         matrizDistancias.append(temp)
+    # Simula a visitação dos nós escolhendo sempre o menor caminho que leva a um nó não visitado
     visitados = set()
-    noInicial = random.randint(0, len(coordenadas)-1) # escolhe o nó de inicio aleatoriamente
+    noInicial = random.randint(0, len(coordenadas)-1) # Escolhe o nó de inicio aleatoriamente
     noAtual = noInicial
     distanciaFinal = 0
+    visitados.add(noInicial)
     while len(visitados) != len(coordenadas):
         proximoNo = -1
         menorDistancia = math.inf
